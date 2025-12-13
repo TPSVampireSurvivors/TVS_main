@@ -6,7 +6,7 @@
 #include "SpawnActor.generated.h"
 
 UCLASS()
-class SURVIVAL_API ASpawnActor : public AActor
+class TVS_MAIN_API ASpawnActor : public AActor
 {
 	GENERATED_BODY()
 

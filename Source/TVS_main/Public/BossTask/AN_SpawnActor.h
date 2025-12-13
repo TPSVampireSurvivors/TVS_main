@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
-#include "SpawnActor.generated.h"
+#include "AN_SpawnActor.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TVS_MAIN_API UAnimNotify_SpawnActor : public UAnimNotify
+class TVS_MAIN_API UAN_SpawnActor : public UAnimNotify
 {
 	GENERATED_BODY()
 

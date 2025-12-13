@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "TVS_mainCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -11,12 +12,17 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "TVS_main.h"
+#include "Components/ArrowComponent.h"
+#include "Bullet.h"
+#include "HPUIWidget.h"
+#include "Components/Image.h"
 
 ATVS_mainCharacter::ATVS_mainCharacter()
 {
 	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+	capsuleComp = GetCapsuleComponent();
+	capsuleComp->InitCapsuleSize(42.f, 96.0f);
+	capsuleComp->SetCollisionProfileName(TEXT("Player"));
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -46,6 +52,8 @@ ATVS_mainCharacter::ATVS_mainCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	firePosition = CreateDefaultSubobject<UArrowComponent>(TEXT("FirePosition"));
+	firePosition->SetupAttachment(GetMesh());
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 }
@@ -65,6 +73,9 @@ void ATVS_mainCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATVS_mainCharacter::Look);
+		EnhancedInputComponent->BindAction(ia_Fire, ETriggerEvent::Started, this, &ATVS_mainCharacter::Fire);
+		EnhancedInputComponent->BindAction(ia_Dash, ETriggerEvent::Started, this, &ATVS_mainCharacter::Dash);
+
 	}
 	else
 	{
@@ -130,4 +141,94 @@ void ATVS_mainCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void ATVS_mainCharacter::Dash()
+{
+	if (bIsDodging) return;
+
+	bIsDodging = true;
+
+	// 무적 시작
+	bInvincible = true;
+	GetWorld()->GetTimerManager().SetTimer(
+		InvincibleTimer,
+		this,
+		&ATVS_mainCharacter::EndInvincible,
+		InvincibleTime,
+		false
+	);
+
+	GetCharacterMovement()->StopMovementImmediately();
+
+	FVector InputDir = GetLastMovementInputVector();
+	if (InputDir.IsNearlyZero())
+	{
+		InputDir = GetActorForwardVector();
+	}
+	InputDir.Normalize();
+	DodgeDirection = InputDir;
+
+	LaunchCharacter(DodgeDirection * DodgeDistance, true, true);
+
+	// Dash 종료 타이머
+	GetWorld()->GetTimerManager().SetTimer(
+		DodgeTimer,
+		this,
+		&ATVS_mainCharacter::EndDodge,
+		DodgeDuration,
+		false
+	);
+}
+void ATVS_mainCharacter::EndDodge()
+{
+	bIsDodging = false;
+}
+void ATVS_mainCharacter::EndInvincible()
+{
+	bInvincible = false;
+}
+void ATVS_mainCharacter::Fire()
+{
+	UE_LOG(LogTemp, Warning, TEXT("FIRE CALLED!"));
+	if(!bulletFactory) UE_LOG(LogTemp, Warning, TEXT("BulletFactoryNull"))
+
+	ABullet* bullet = GetWorld()->SpawnActor<ABullet>(bulletFactory,
+		firePosition->GetComponentLocation(),
+		firePosition->GetComponentRotation());
+
+	if (!bullet)
+		UE_LOG(LogTemp, Error, TEXT("BULLET SPAWN FAILED! (bulletFactory is NULL?)"));
+}
+void ATVS_mainCharacter::TakeEnemyDamage(int32 Damage)
+{
+	HP -= Damage;
+	OnHPChanged();
+	if (HP <= 0)
+	{
+		Destroy();
+	}
+}
+void ATVS_mainCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	HPUI = CreateWidget<UUserWidget>(GetWorld(), HPUIWidgetClass);
+	if (HPUI)
+	{
+		HPUI->AddToViewport();
+		// 시작할 때 하트 3개 세팅
+		OnHPChanged();
+	}
+}
+void ATVS_mainCharacter::OnHPChanged()
+{
+	if (HPUI)
+	{
+		UHPUIWidget* Widget = Cast<UHPUIWidget>(HPUI);
+		if (Widget)
+		{
+			Widget->UpdateHearts(HP);
+		}
+	}
 }

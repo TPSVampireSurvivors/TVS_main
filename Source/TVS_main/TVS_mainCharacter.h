@@ -32,6 +32,8 @@ class ATVS_mainCharacter : public ACharacter
 	UCameraComponent* FollowCamera;
 	
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UCapsuleComponent* capsuleComp;
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -58,7 +60,7 @@ protected:
 
 	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	virtual void BeginPlay() override;
 protected:
 
 	/** Called for movement input */
@@ -85,6 +87,53 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* ia_Dash;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	FVector2D LastMoveInput;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	float DodgeDistance = 2000.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	float DodgeDuration = 0.2f;
+
+	bool bIsDodging = false;
+	FVector DodgeDirection;
+	FTimerHandle DodgeTimer;
+	UFUNCTION()
+	void Dash();        // Dash 시작
+
+	UFUNCTION()
+	void EndDodge();    // Dash 종료
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	float DashSpeed = 2500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	float DashTime = 0.2f;
+
+	float CurrentDashTime = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	bool bInvincible = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dash")
+	float InvincibleTime = 0.3f;
+	UPROPERTY(EditAnywhere)
+	class UArrowComponent* firePosition;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class ABullet> bulletFactory;
+	FTimerHandle InvincibleTimer;
+	void EndInvincible();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* ia_Fire;
+	void Fire();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	int32 HP = 3;
+	UFUNCTION()
+	void TakeEnemyDamage(int32 Damage);
+	UFUNCTION()
+	void OnHPChanged();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	TSubclassOf<UUserWidget> HPUIWidgetClass;
+	UUserWidget* HPUI;
 public:
 
 	/** Returns CameraBoom subobject **/
@@ -93,4 +142,3 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 };
-

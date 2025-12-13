@@ -3,7 +3,7 @@
 #include "FireBall.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "SurvivalCharacter.h"
+#include "TVS_mainCharacter.h"
 // Sets default values
 AFireBall::AFireBall()
 {
@@ -39,7 +39,7 @@ void AFireBall::OnEnemyOverlap(UPrimitiveComponent* OverlappedComponent, AActor*
 	OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const
 	FHitResult& SweepResult)
 {
-	ASurvivalCharacter* player = Cast<ASurvivalCharacter>(OtherActor);
+	ATVS_mainCharacter* player = Cast<ATVS_mainCharacter>(OtherActor);
 
 	// 만일, 캐스팅이 성공했다면 ….
 	if (player != nullptr)

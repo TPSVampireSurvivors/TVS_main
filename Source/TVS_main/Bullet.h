@@ -7,7 +7,7 @@
 #include "Bullet.generated.h"
 
 UCLASS()
-class SURVIVAL_API ABullet : public AActor
+class TVS_MAIN_API ABullet : public AActor
 {
 	GENERATED_BODY()
 

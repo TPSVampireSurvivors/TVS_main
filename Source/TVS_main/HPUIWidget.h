@@ -5,7 +5,7 @@
 #include "HPUIWidget.generated.h"
 
 UCLASS()
-class SURVIVAL_API UHPUIWidget : public UUserWidget
+class TVS_MAIN_API UHPUIWidget : public UUserWidget
 {
     GENERATED_BODY()
 

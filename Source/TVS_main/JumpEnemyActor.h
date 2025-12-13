@@ -7,7 +7,7 @@
 #include "JumpEnemyActor.generated.h"
 
 UCLASS()
-class SURVIVAL_API AJumpEnemyActor : public AActor
+class TVS_MAIN_API AJumpEnemyActor : public AActor
 {
 	GENERATED_BODY()
 
