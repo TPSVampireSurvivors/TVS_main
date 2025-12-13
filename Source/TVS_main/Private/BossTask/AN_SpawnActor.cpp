@@ -13,14 +13,12 @@ void UAN_SpawnActor::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase*
 	}
 
 	FVector SpawnLocation = MeshComp->GetComponentLocation();
-	FRotator SpawnRotation = FRotator::ZeroRotator; // 회전은 보통 0 (바닥에 평행)
+	FRotator SpawnRotation = FRotator::ZeroRotator;
 
 
 
-	// 3. 오프셋 적용
 	SpawnLocation += LocationOffset;
 
-	// 4. 액터 소환 (항상 스폰되도록 CollisionHandlingOverride 설정 추천)
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 

@@ -51,6 +51,7 @@ void ABossCharacter::BeginPlay()
     BodyChargeBox->OnComponentBeginOverlap.AddDynamic(this, &ABossCharacter::OnAttackOverlap);
     SlamSphere->OnComponentBeginOverlap.AddDynamic(this, &ABossCharacter::OnAttackOverlap);
 	
+    CurrentHealth = MaxHealth;
 }
 
 // Called every frame
@@ -69,17 +70,13 @@ void ABossCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void ABossCharacter::OnAttackOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    // 나 자신이나, 이미 죽은 애는 무시
     if (OtherActor == this || !OtherActor) return;
 
-    // 플레이어인지 확인 (Tag나 Class로 체크)
     if (OtherActor->ActorHasTag("Player"))
     {
-        // 3. 데미지 적용! (여기서 10.0f는 데미지 양)
-        //UGameplayStatics::ApplyDamage(OtherActor, 10.0f, GetController(), this, UDamageType::StaticClass());
-
-        // (선택) 타격 이펙트/사운드 재생 코드 추가 가능
-        //UE_LOG(LogTemp, Warning, TEXT("Player Hit!"));
+        ACharacter* Player = UGameplayStatics::GetPlayerCharacter(this->GetWorld(), 0);
+        if (!Player) return;
+        UGameplayStatics::ApplyDamage(Player, 1.0f, nullptr, nullptr, nullptr);
     }
 }
 
@@ -101,8 +98,6 @@ void ABossCharacter::ActivateHitbox(bool bActive)
 
     FName NewProfile = bActive ? TEXT("OverlapAllDynamic") : TEXT("NoCollision");
 
-    // ✅ [변경] 배열(Array)에 들어있는 개수만큼 반복합니다.
-    // "리스트에 있는 거 하나씩 다 꺼내봐(Type)"
     for (const EAttackHitboxType& Type : CurrentAttackData->ActiveHitboxes)
     {
         switch (Type)
@@ -117,7 +112,6 @@ void ABossCharacter::ActivateHitbox(bool bActive)
 
         case EAttackHitboxType::BodyCharge:
             BodyChargeBox->SetCollisionProfileName(NewProfile);
-            // 돌진은 보통 전신 무기니까 필요하면 팔다리도 여기서 같이 켜줘도 됨
             break;
 
         case EAttackHitboxType::Slam:
@@ -180,13 +174,10 @@ void ABossCharacter::ExecuteAttackEffect()
 
 void ABossCharacter::FireProjectile(FRotator FireRotation)
 {
-    // 1. 데이터가 없거나, 쏠 투사체(BP)가 설정 안 되어 있으면 취소
     if (!CurrentAttackData || !CurrentAttackData->ProjectileClass) return;
 
-    // 2. 발사 위치(Socket) 찾기
     FVector MuzzleLoc = GetActorLocation(); // 소켓 못 찾으면 몸통 위치
 
-    // 데이터 에셋에 적힌 소켓 이름("Muzzle_01")으로 위치 찾기
     if (!CurrentAttackData->MuzzleSocketName.IsNone())
     {
         MuzzleLoc = GetMesh()->GetSocketLocation(CurrentAttackData->MuzzleSocketName);
@@ -194,25 +185,12 @@ void ABossCharacter::FireProjectile(FRotator FireRotation)
 
     FRotator SpawnRotation;
     ACharacter* Player = UGameplayStatics::GetPlayerCharacter(this, 0);
-    //if (Player)
-    //{
-    //    // 시작점(총구)에서 목표점(플레이어)을 바라보는 회전값 계산
-    //    // (플레이어의 캡슐 중심보다 약간 위나 Mesh 위치를 노리면 더 정확합니다)
-    //    FVector TargetLocation = Player->GetActorLocation();
-
-    //    SpawnRotation = UKismetMathLibrary::FindLookAtRotation(MuzzleLoc, TargetLocation);
-    //}
-    //else
-    //{
-        // 플레이어가 없으면 그냥 보스 정면으로 발사
     SpawnRotation = GetActorRotation();
-    //}
 
     float FRand = CurrentAttackData->FRand;
     SpawnRotation.Pitch += FMath::FRandRange(-FRand, FRand);
     SpawnRotation.Yaw += FMath::FRandRange(-FRand, FRand);
 
-    // 4. 진짜 생성 (Spawn)
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;      // 총알 주인은 나 (팀킬 방지용)
     SpawnParams.Instigator = this; // 가해자도 나
@@ -230,3 +208,4 @@ void ABossCharacter::FireProjectile(FRotator FireRotation)
         UGameplayStatics::PlaySoundAtLocation(this, CurrentAttackData->AttackSound, MuzzleLoc);
     }
 }
+

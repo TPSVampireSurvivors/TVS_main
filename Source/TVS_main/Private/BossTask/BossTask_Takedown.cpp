@@ -12,7 +12,6 @@
 #include "DrawDebugHelpers.h"
 #include "TVS_main.h"
 #include <Kismet/KismetMathLibrary.h>
-// ... (ExecuteTask, TickTask 등은 동일하므로 생략, 변수 접근만 바뀜) ...
 
 UBossTask_Takedown::UBossTask_Takedown(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -22,12 +21,10 @@ UBossTask_Takedown::UBossTask_Takedown(const FObjectInitializer& ObjectInitializ
 
 EStateTreeRunStatus UBossTask_Takedown::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition)
 {
-    // [중요] 부모 클래스 로직 실행 (블루프린트 노드 호환성 위해 필수)
     Super::EnterState(Context, Transition);
 
     //UE_LOG(LogBossTest, Error, TEXT("Takedown Enter"));
 
-    // Context Owner 가져오기
     AActor* OwnerActor = Cast<AActor>(Context.GetOwner());
     BossCharacter = Cast<ACharacter>(OwnerActor);
 
@@ -40,7 +37,6 @@ EStateTreeRunStatus UBossTask_Takedown::EnterState(FStateTreeExecutionContext& C
     UAnimInstance* AnimInst = BossCharacter->GetMesh()->GetAnimInstance();
     if (!AnimInst) return EStateTreeRunStatus::Failed;
 
-    // [1단계] Start 몽타주 재생
     InternalState = ETakedownState::Preparing;
     //UE_LOG(LogBossTest, Error, TEXT("1 Enter"));
 
@@ -53,7 +49,6 @@ EStateTreeRunStatus UBossTask_Takedown::EnterState(FStateTreeExecutionContext& C
     }
     else
     {
-        // 몽타주 재생 실패 시 바로 다음 단계로
         OnStartMontageEnded(Montage_Start, false);
     }
 
@@ -62,15 +57,12 @@ EStateTreeRunStatus UBossTask_Takedown::EnterState(FStateTreeExecutionContext& C
 
 void UBossTask_Takedown::OnStartMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    //UE_LOG(LogBossTest, Error, TEXT("2 Enter"));
     if (bInterrupted || InternalState != ETakedownState::Preparing) return;
 
     InternalState = ETakedownState::Jumping;
 
-    // 1. 점프 계산 및 실행
     StartAscend();
 
-    // 2. Loop 몽타주 재생
     if (UAnimInstance* AnimInst = BossCharacter->GetMesh()->GetAnimInstance())
     {
         if (Montage_Loop) AnimInst->Montage_Play(Montage_Loop);
@@ -81,26 +73,17 @@ void UBossTask_Takedown::StartAscend()
 {
     if (!BossCharacter) return;
 
-    // 중력 무시하고 강제로 밀어올리기 위해 잠시 중력 끔 (선택 사항이나, 정확한 시간 제어를 위해 추천)
-    // 혹은 중력을 켠 상태로 하려면 V = g * t 공식을 써야 함.
-    // 여기서는 "연출"을 위해 LaunchCharacter로 강하게 띄웁니다.
-
-    // 안전장치: 데이터가 없으면 기본값 사용 (혹은 리턴)
     float TargetHeight = (AttackData) ? AttackData->JumpHeight : 5000.0f;
     float ReachTime = (AttackData) ? AttackData->HoverDuration : 3.0f;
 
-    // 단순 무식하게 속도 계산: 거리 / 시간
-    // (중력 영향을 고려하면 더 복잡하지만, BossCharacter는 보통 강제 힘으로 띄우는 게 속 편함)
     float UpVelocity = TargetHeight / ReachTime;
     BossCharacter->GetCharacterMovement()->GravityScale = 0.0f;
 
     FVector LaunchVel = FVector(0, 0, UpVelocity);
     BossCharacter->LaunchCharacter(LaunchVel, true, true);
 
-    //애니메이션 시작
     if (AttackData && AttackData->AttackVFX)
     {
-        // 소켓 이름이 없으면 등(spine_02)으로 설정
         FName SocketName = AttackData->VFXSocketName.IsNone() ? FName("spine_02") : AttackData->VFXSocketName;
 
         UParticleSystemComponent* PSC = UGameplayStatics::SpawnEmitterAttached(
@@ -114,10 +97,8 @@ void UBossTask_Takedown::StartAscend()
 
         if (PSC)
         {
-            // 나중에 끄기 위해 태그 부착 (이름은 TakedownBooster로 설정)
             PSC->ComponentTags.Add(FName("TakedownBooster"));
 
-            // 등 뒤로 뿜어져 나오게 회전 및 위치 조정
             FRotator BoosterRot = FRotator(180.0f, 0.0f, 0.0f);
             FVector BoosterOffset = FVector(0.0f, 0.0f, 150.0f);
 
@@ -127,15 +108,11 @@ void UBossTask_Takedown::StartAscend()
         }
     }
 
-    // 2. 루프 몽타주 재생
     if (UAnimInstance* AnimInst = BossCharacter->GetMesh()->GetAnimInstance())
     {
         if (Montage_Loop) AnimInst->Montage_Play(Montage_Loop);
     }
 
-    // 3. 착지 델리게이트는 아직 바인딩 하지 않음 (올라가는 중이니까)
-
-    // 4. 상승 시간(3.0초) 후에 Hover 시작하도록 타이머 설정
     BossCharacter->GetWorld()->GetTimerManager().SetTimer(
         TimerHandle_Hover,
         this,
@@ -145,9 +122,6 @@ void UBossTask_Takedown::StartAscend()
     );
 }
 
-// --------------------------------------------------------
-// [단계 2] 공중 부양 (Hover Time: 3.0초)
-// --------------------------------------------------------
 void UBossTask_Takedown::StartHover()
 {
     if (!BossCharacter) return;
@@ -155,9 +129,6 @@ void UBossTask_Takedown::StartHover()
     BossCharacter->GetCharacterMovement()->StopMovementImmediately();
     BossCharacter->GetCharacterMovement()->GravityScale = 0.0f;
 
-    // 플레이어 바라보기 로직 ...
-
-    // 체공 시간 데이터 사용
     float HoverDuration = (AttackData) ? AttackData->HoverDuration : 3.0f;
 
     BossCharacter->GetWorld()->GetTimerManager().SetTimer(
@@ -169,16 +140,14 @@ void UBossTask_Takedown::StartHover()
     );
 }
 
-// [3단계] 내리찍기 (StartSmash)
 void UBossTask_Takedown::StartSmash()
 {
     if (!BossCharacter) return;
 
     BossCharacter->GetCharacterMovement()->GravityScale = 3.0f;
 
-    // 2. 목표 지점(플레이어) 계산
     FVector StartLoc = BossCharacter->GetActorLocation();
-    FVector TargetLoc = StartLoc; // Default
+    FVector TargetLoc = StartLoc; 
 
     if (ACharacter* Player = UGameplayStatics::GetPlayerCharacter(BossCharacter->GetWorld(), 0))
     {
@@ -187,7 +156,6 @@ void UBossTask_Takedown::StartSmash()
 
     FVector Dir = (TargetLoc - StartLoc).GetSafeNormal();
 
-    // 낙하 속도 데이터 사용
     float FallSpeed = 6000.0f;
     FVector SmashVel = Dir * FallSpeed;
 
@@ -197,22 +165,17 @@ void UBossTask_Takedown::StartSmash()
 
 void UBossTask_Takedown::OnCharacterLanded(const FHitResult& Hit)
 {
-    //UE_LOG(LogBossTest, Error, TEXT("land Enter"));
     if (InternalState != ETakedownState::Jumping) return;
 
-    // 델리게이트 해제
     BossCharacter->LandedDelegate.RemoveDynamic(this, &UBossTask_Takedown::OnCharacterLanded);
 
     InternalState = ETakedownState::Recovering;
 
-    // 물리 복구
     BossCharacter->GetCharacterMovement()->GravityScale = 1.0f;
     BossCharacter->GetCharacterMovement()->StopMovementImmediately();
 
-    // 공격 판정
     PerformImpactLogic();
 
-    // Land 몽타주 재생
     UAnimInstance* AnimInst = BossCharacter->GetMesh()->GetAnimInstance();
     if (AnimInst && Montage_Land)
     {
@@ -231,13 +194,11 @@ void UBossTask_Takedown::OnCharacterLanded(const FHitResult& Hit)
 void UBossTask_Takedown::PerformImpactLogic()
 {
     TakedownEffect();
-    // 여기에 OverlapMultiByChannel 등 데미지 로직 구현
-    // DrawDebugSphere(BossCharacter->GetWorld(), BossCharacter->GetActorLocation(), 300.f, 32, FColor::Red, false, 2.0f);
 }
 
 void UBossTask_Takedown::OnLandMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-    //UE_LOG(LogBossTest, Error, TEXT("last Enter"));
+    //UE_LOG(LogBossTest, Error, TEXT("last Enter"))
     InternalState = ETakedownState::Finished;
 }
 

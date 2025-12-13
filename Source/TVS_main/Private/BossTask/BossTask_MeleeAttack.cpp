@@ -55,7 +55,7 @@ EStateTreeRunStatus UBossTask_MeleeAttack::Tick(FStateTreeExecutionContext& Cont
 	// 2. 몽타주가 끝났는지 확인
 	UAnimInstance* AnimInstance = BossCharacter->GetMesh()->GetAnimInstance();
 
-	// ✅ [변경] AttackData 안에 들어있는 몽타주를 체크합니다.
+	//  AttackData 안에 들어있는 몽타주를 체크합니다.
 	if (AnimInstance && !AnimInstance->Montage_IsPlaying(AttackData->Montage))
 	{
 		return EStateTreeRunStatus::Succeeded; // 끝남!

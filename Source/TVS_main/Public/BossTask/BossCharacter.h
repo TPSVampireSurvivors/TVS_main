@@ -75,4 +75,10 @@ public:
 	//시작용 패턴
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI|Config")
 	class UBossAttackData* StartPattern;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	float CurrentHealth = 50;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+	float MaxHealth;
 };

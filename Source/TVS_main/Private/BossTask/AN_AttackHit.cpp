@@ -13,8 +13,7 @@ void UAN_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* 
 	if (!MeshComp) return;
 	ACharacter* Player = UGameplayStatics::GetPlayerCharacter(MeshComp->GetWorld(), 0);
 	if (!Player) return;
-
-	//플레이어에게 데미지
+	UGameplayStatics::ApplyDamage(Player, 1.0f, nullptr, nullptr, nullptr);
 
 }
 
